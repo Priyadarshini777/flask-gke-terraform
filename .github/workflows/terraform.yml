@@ -1,0 +1,55 @@
+name: Terraform
+
+on:
+  push:
+    paths:
+      - 'terraform/**'
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: "1.6.0"
+
+    - name: Authenticate
+      run: |
+        echo "${{ secrets.GCP_SA_KEY }}" > /tmp/gcloud-key.json
+        gcloud auth activate-service-account --key-file=/tmp/gcloud-key.json
+        gcloud config set project ${{ secrets.GCP_PROJECT }}
+
+    - name: Terraform init
+      working-directory: ./terraform
+      run: terraform init
+
+    - name: Terraform fmt
+      working-directory: ./terraform
+      run: terraform fmt -check
+
+    - name: Terraform validate
+      working-directory: ./terraform
+      run: terraform validate
+
+    - name: Terraform plan
+      working-directory: ./terraform
+      run: terraform plan -out=tfplan
+
+    - name: Terraform apply
+      if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+      working-directory: ./terraform
+      run: terraform apply -auto-approve tfplan
