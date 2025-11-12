@@ -13,47 +13,56 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # 🧩 Step 1 — Checkout repo
     - name: Checkout
       uses: actions/checkout@v4
 
+    # 🧩 Step 2 — Setup Google Cloud SDK
     - name: Setup Google Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ secrets.GCP_PROJECT }}
-        service_account_key: ${{ secrets.GCP_SA_KEY_JSON }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
 
+    # 🧩 Step 3 — Install Terraform
     - name: Install Terraform
       uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: "1.6.0"
 
+    # 🧩 Step 4 — Authenticate with GCP
     - name: Authenticate
       run: |
-        # Write the service account JSON key safely to a file
+        echo "🔐 Writing GCP service account key..."
         cat > /tmp/gcloud-key.json <<'EOF'
         ${{ secrets.GCP_SA_KEY }}
         EOF
 
-        # Activate the service account and set project
+        echo "✅ Activating service account..."
         gcloud auth activate-service-account --key-file=/tmp/gcloud-key.json
         gcloud config set project ${{ secrets.GCP_PROJECT }}
 
+    # 🧩 Step 5 — Initialize Terraform
     - name: Terraform init
       working-directory: ./terraform
       run: terraform init
 
+    # 🧩 Step 6 — Auto-format Terraform code
     - name: Terraform fmt
       working-directory: ./terraform
       run: terraform fmt -recursive
 
+    # 🧩 Step 7 — Validate Terraform configuration
     - name: Terraform validate
       working-directory: ./terraform
       run: terraform validate
 
+    # 🧩 Step 8 — Terraform plan (preview changes)
     - name: Terraform plan
       working-directory: ./terraform
       run: terraform plan -out=tfplan
 
+    # 🧩 Step 9 — Terraform apply (deploy infra)
     - name: Terraform apply
       if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
       working-directory: ./terraform
