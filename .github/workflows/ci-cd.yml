@@ -18,16 +18,21 @@ jobs:
       uses: google-github-actions/setup-gcloud@v1
       with:
         project_id: ${{ secrets.GCP_PROJECT }}
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        service_account_key: ${{ secrets.GCP_SA_KEY_JSON }}
 
     - name: Configure Docker auth for Artifact Registry
       run: |
-        echo "${{ secrets.GCP_SA_KEY }}" > /tmp/gcloud-key.json
+        # Write the service account JSON key safely
+        cat > /tmp/gcloud-key.json <<'EOF'
+        ${{ secrets.GCP_SA_KEY_JSON }}
+        EOF
+
+        # Authenticate with Google Cloud
         gcloud auth activate-service-account --key-file=/tmp/gcloud-key.json
         gcloud config set project ${{ secrets.GCP_PROJECT }}
-        gcloud auth configure-docker --quiet ${{
-          secrets.GCP_REGION
-        }}-docker.pkg.dev
+
+        # Configure Docker authentication for Artifact Registry
+        gcloud auth configure-docker --quiet ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
     - name: Build Docker image
       run: |
@@ -40,7 +45,9 @@ jobs:
 
     - name: Get GKE credentials
       run: |
-        gcloud container clusters get-credentials primary-gke --region=${{ secrets.GCP_REGION }} --project=${{ secrets.GCP_PROJECT }}
+        gcloud container clusters get-credentials primary-gke \
+          --region=${{ secrets.GCP_REGION }} \
+          --project=${{ secrets.GCP_PROJECT }}
 
     - name: Replace image placeholder and deploy
       run: |
@@ -51,5 +58,7 @@ jobs:
 
     - name: Wait for service external-ip and print
       run: |
-        kubectl wait --for=condition=available --timeout=120s deployment/backend-deployment || true
+        echo "⏳ Waiting for GKE service to get external IP..."
+        kubectl wait --for=condition=available --timeout=180s deployment/backend-deployment || true
+        echo "✅ Deployed services:"
         kubectl get svc backend-service -o wide
