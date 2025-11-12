@@ -24,7 +24,7 @@ jobs:
       run: |
         # Write the service account JSON key safely
         cat > /tmp/gcloud-key.json <<'EOF'
-        ${{ secrets.GCP_SA_KEY_JSON }}
+        ${{ secrets.GCP_SA_KEY }}
         EOF
 
         # Authenticate with Google Cloud

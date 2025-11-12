@@ -31,7 +31,7 @@ jobs:
       run: |
         # Write the service account JSON key safely to a file
         cat > /tmp/gcloud-key.json <<'EOF'
-        ${{ secrets.GCP_SA_KEY_JSON }}
+        ${{ secrets.GCP_SA_KEY }}
         EOF
 
         # Activate the service account and set project
