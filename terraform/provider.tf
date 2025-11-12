@@ -5,10 +5,12 @@ terraform {
       version = "~> 5.0"
     }
   }
+
   required_version = ">= 1.6.0"
 }
 
 provider "google" {
-  project = var.project_id
-  region  = var.region
+  credentials = file("/tmp/gcloud-key.json") # 👈 add this line
+  project     = var.project_id
+  region      = var.region
 }
